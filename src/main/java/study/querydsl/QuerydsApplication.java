@@ -6,9 +6,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class QuerydsApplication {
 
-	public static void main(String[] args) {
+    public static void main(String[] args) {
 
-		SpringApplication.run(QuerydsApplication.class, args);
-	}
+        SpringApplication.run(QuerydsApplication.class, args);
+    }
 
 }

@@ -19,23 +19,23 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Commit
 class QuerydsApplicationTests {
 
-	@Autowired
-	EntityManager em;
+    @Autowired
+    EntityManager em;
 
-	@Test
-	void contextLoads() {
-		Hello hello = new Hello();
-		em.persist(hello);
+    @Test
+    void contextLoads() {
+        Hello hello = new Hello();
+        em.persist(hello);
 
-		JPAQueryFactory query = new JPAQueryFactory(em);
-		QHello qHello = new QHello("h");
+        JPAQueryFactory query = new JPAQueryFactory(em);
+        QHello qHello = new QHello("h");
 
-		Hello result = query
-				.selectFrom(qHello)
-				.fetchOne();
+        Hello result = query
+                .selectFrom(qHello)
+                .fetchOne();
 
-		assertThat(result).isEqualTo(hello);
-		assertThat(result.getId()).isEqualTo(hello.getId());
-	}
+        assertThat(result).isEqualTo(hello);
+        assertThat(result.getId()).isEqualTo(hello.getId());
+    }
 
 }
