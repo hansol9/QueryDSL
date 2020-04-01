@@ -2,6 +2,8 @@ package study.querydsl;
 
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
+import com.querydsl.core.types.dsl.CaseBuilder;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,6 +17,8 @@ import study.querydsl.entity.QTeam;
 import study.querydsl.entity.Team;
 
 import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.PersistenceUnit;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -29,6 +33,9 @@ public class QuerydslBasicTest {
     EntityManager em;
 
     JPAQueryFactory jpaQueryFactory;
+
+    @PersistenceUnit
+    EntityManagerFactory emf;
 
     @BeforeEach
     public void before() {
@@ -308,13 +315,149 @@ public class QuerydslBasicTest {
             System.out.println("turple = " + tuple);
         }
     }
-    
+
     @Test
     public void fetchJoinNo() throws Exception {
-        //given
-        
-        //when
-        
-        //then
+        em.flush();
+        em.clear();
+
+        Member findMember = jpaQueryFactory
+                .selectFrom(member)
+                .where(member.username.eq("member1"))
+                .fetchOne();
+
+        boolean loaded = emf.getPersistenceUnitUtil().isLoaded(findMember.getTeam());
+        assertThat(loaded).as("패치 조인 미적용").isFalse();
+
+    }
+
+    @Test
+    public void fetchJoinUse() throws Exception {
+        em.flush();
+        em.clear();
+
+        Member findMember = jpaQueryFactory
+                .selectFrom(member)
+                .join(member.team, team).fetchJoin()
+                .where(member.username.eq("member1"))
+                .fetchOne();
+
+        boolean loaded = emf.getPersistenceUnitUtil().isLoaded(findMember.getTeam());
+        assertThat(loaded).as("패치 조인 적용").isTrue();
+
+    }
+
+    /**
+     * 나이가 가장 많은 회원 조회
+     */
+    @Test
+    public void subQuery() throws Exception {
+        QMember memberSub = new QMember("memberSub");
+        List<Member> result = jpaQueryFactory
+                .selectFrom(member)
+                .where(member.age.eq(
+                        JPAExpressions
+                                .select(memberSub.age.max())
+                                .from(memberSub)
+                ))
+                .fetch();
+
+        assertThat(result)
+                .extracting("age")
+                .containsExactly(40);
+    }
+
+    /**
+     * 나이가 평균 이상인 회원
+     */
+    @Test
+    public void subQueryGoe() throws Exception {
+        QMember memberSub = new QMember("memberSub");
+        List<Member> result = jpaQueryFactory
+                .selectFrom(member)
+                .where(member.age.goe(
+                        JPAExpressions
+                                .select(memberSub.age.avg())
+                                .from(memberSub)
+                ))
+                .fetch();
+
+        assertThat(result)
+                .extracting("age")
+                .containsExactly(30, 40);
+    }
+
+    /**
+     * 나이가 평균 이상인 회원
+     */
+    @Test
+    public void subQueryIn() throws Exception {
+        QMember memberSub = new QMember("memberSub");
+        List<Member> result = jpaQueryFactory
+                .selectFrom(member)
+                .where(member.age.in(
+                        JPAExpressions
+                                .select(memberSub.age)
+                                .from(memberSub)
+                                .where(memberSub.age.gt(10))
+                ))
+                .fetch();
+
+        assertThat(result)
+                .extracting("age")
+                .containsExactly(20, 30, 40);
+    }
+    
+    @Test
+    public void selectedSubQuery() throws Exception {
+        QMember memberSub = new QMember("memberSub");
+        List<Tuple> result = jpaQueryFactory
+                .select(member.username,
+                        JPAExpressions
+                                .select(memberSub.age.avg())
+                                .from(memberSub))
+                .from(member)
+                .fetch();
+
+        for (Tuple tuple : result) {
+            System.out.println("tuple = " + tuple);
+        }
+    }
+
+    @Test
+    public void basicCase() throws Exception {
+        List<String> result = jpaQueryFactory
+                .select(member.age
+                        .when(10).then("열살")
+                        .when(20).then("스무살")
+                        .otherwise("기타")
+                )
+                .from(member)
+                .fetch();
+
+        for (String records : result) {
+            System.out.println("Records = " + records);
+        }
+    }
+
+    @Test
+    public void complexCase() throws Exception {
+        List<String> result = jpaQueryFactory
+                .select(new CaseBuilder()
+                        .when(member.age.between(0, 20)).then("0~20살")
+                        .when(member.age.between(21, 30)).then("21~30살")
+                        .otherwise("기타")
+                )
+                .from(member)
+                .fetch();
+
+        for (String records : result) {
+            System.out.println("Records = " + records);
+        }
+    }
+
+    @Test
+    public void concat() throws Exception {
+
     }
 }
